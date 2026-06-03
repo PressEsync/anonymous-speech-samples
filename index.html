@@ -523,73 +523,25 @@
     ];
 
     const SAMPLES = [
-      {
-        id: 1,
-        setId: 1,
-        text: "I don't think you care for anything. You don't really care for England when you praise it. You don't care for America."
-      },
-      {
-        id: 2,
-        setId: 1,
-        text: "Jack London, Waikiki Beach, Honolulu, Oahu."
-      },
-      {
-        id: 3,
-        setId: 2,
-        text: "The weather forecast isn't good."
-      },
-      {
-        id: 4,
-        setId: 2,
-        text: "The shutter consists of two parts, a fast opening part and a fast closing part."
-      },
-      {
-        id: 5,
-        setId: 3,
-        text: "With this, Matthew's companion stopped talking, partly because she was out of breath, and partly because they had reached the buggy."
-      },
-      {
-        id: 6,
-        setId: 3,
-        text: "Anything unusual or abnormal was sufficient to send a fellow to Molokai."
-      },
-      {
-        id: 7,
-        setId: 4,
-        text: "I also understand that similar branch organizations have made their appearance in Europe."
-      },
-      {
-        id: 8,
-        setId: 4,
-        text: "Shoppers were attracted by the heavy discounting on selected items."
-      },
-      {
-        id: 9,
-        setId: 1,
-        text: "This season has been a mixture of frustration and fulfilment."
-      },
-      {
-        id: 10,
-        setId: 2,
-        text: "We have become amateur insurance experts and fine feathered yard birds."
-      },
-      {
-        id: 11,
-        setId: 3,
-        text: "Don't ask me to carry an oily rag like that."
-      },
-      {
-        id: 12,
-        setId: 4,
-        text: "When she expressed a doubtful hope that Tinkerbell would be glad to see her, he said, Who is Tinkerbell?"
-      }
+      { id: 1, datasetId: 1 },
+      { id: 2, datasetId: 1 },
+      { id: 3, datasetId: 2 },
+      { id: 4, datasetId: 2 },
+      { id: 5, datasetId: 3 },
+      { id: 6, datasetId: 3 },
+      { id: 7, datasetId: 4 },
+      { id: 8, datasetId: 4 },
+      { id: 9, datasetId: 1 },
+      { id: 10, datasetId: 2 },
+      { id: 11, datasetId: 3 },
+      { id: 12, datasetId: 4 }
     ];
 
     const SETS = [
-      { id: 1, title: "Evaluation Set 1", note: "Three utterances from the first evaluation condition." },
-      { id: 2, title: "Evaluation Set 2", note: "Three utterances from the second evaluation condition." },
-      { id: 3, title: "Evaluation Set 3", note: "Three utterances from the third evaluation condition." },
-      { id: 4, title: "Evaluation Set 4", note: "Three utterances from the fourth evaluation condition." }
+      { id: 1, title: "Samples 01-03", note: "Three utterances ordered by sample ID.", sampleIds: [1, 2, 3] },
+      { id: 2, title: "Samples 04-06", note: "Three utterances ordered by sample ID.", sampleIds: [4, 5, 6] },
+      { id: 3, title: "Samples 07-09", note: "Three utterances ordered by sample ID.", sampleIds: [7, 8, 9] },
+      { id: 4, title: "Samples 10-12", note: "Three utterances ordered by sample ID.", sampleIds: [10, 11, 12] }
     ];
 
     const methodGrid = document.getElementById("methodGrid");
@@ -600,7 +552,11 @@
     }
 
     function audioPath(sample, method) {
-      return `audio/${sample.id}_${method.id}_${sample.setId}.wav`;
+      return `audio/${sample.id}_${method.id}_${sample.datasetId}.wav`;
+    }
+
+    function textPath(sample) {
+      return `texts/${sample.id}.txt`;
     }
 
     function renderMethods() {
@@ -618,7 +574,7 @@
           ${samples.map((sample) => `
             <article class="prompt-card">
               <span class="prompt-id">Sample ${padSampleId(sample.id)}</span>
-              <p class="prompt-text">${sample.text}</p>
+              <p class="prompt-text" data-text-sample="${sample.id}">Loading text...</p>
             </article>
           `).join("")}
         </div>
@@ -669,7 +625,7 @@
 
     function renderSampleSections() {
       sampleSections.innerHTML = SETS.map((set) => {
-        const samples = SAMPLES.filter((sample) => sample.setId === set.id);
+        const samples = set.sampleIds.map((sampleId) => SAMPLES.find((sample) => sample.id === sampleId));
         return `
           <section class="section" id="set-${set.id}" aria-labelledby="set-${set.id}-title">
             <div class="section-inner">
@@ -688,8 +644,26 @@
       }).join("");
     }
 
+    async function loadPromptTexts() {
+      await Promise.all(SAMPLES.map(async (sample) => {
+        const target = document.querySelector(`[data-text-sample="${sample.id}"]`);
+        if (!target) return;
+
+        try {
+          const response = await fetch(textPath(sample));
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const text = (await response.text()).trim();
+          target.textContent = text || `Sample ${padSampleId(sample.id)} text is empty.`;
+        } catch (error) {
+          target.textContent = `Unable to load text for Sample ${padSampleId(sample.id)}.`;
+          console.warn(`Unable to load ${textPath(sample)}`, error);
+        }
+      }));
+    }
+
     renderMethods();
     renderSampleSections();
+    loadPromptTexts();
   </script>
 </body>
 </html>
